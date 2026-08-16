@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIVEKANANDAR TNPSC CENTRE</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Noto Sans Tamil', 'Inter', sans-serif; }
+    .option { transition: all 0.3s ease; border: 2px solid rgba(255,255,255,0.2); }
+    .option:hover { transform: translateX(8px); background-color: rgb(129 140 248 / 0.15); }
+    .option.selected { background-color: rgb(99 102 241 / 0.25); border-color: #6366f1; }
+    .progress-container { height: 10px; background: rgba(255,255,255,0.1); border-radius: 9999px; overflow: hidden; }
+    .progress-bar { height: 100%; background: linear-gradient(to right, #6366f1, #a855f7); transition: width 0.4s ease; }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-950 via-purple-950 to-violet-950 text-white min-h-screen">
+  <div class="max-w-6xl mx-auto p-6">
+    <!-- LOGIN -->
+    <div id="login-block">
+      <div class="max-w-md mx-auto bg-white/15 backdrop-blur-xl p-10 rounded-3xl border border-white/20 mt-20 shadow-2xl">
+        <h2 class="text-3xl font-semibold text-center mb-8">உள்நுழைக</h2>
+        <div class="space-y-6">
+          <input type="text" id="username" placeholder="பயனர் பெயர்" class="w-full px-6 py-5 bg-white/10 border border-white/30 rounded-2xl focus:outline-none focus:border-indigo-400 text-lg">
+          <div class="relative">
+            <input type="password" id="password" placeholder="கடவுச்சொல்" class="w-full px-6 py-5 bg-white/10 border border-white/30 rounded-2xl focus:outline-none focus:border-indigo-400 text-lg">
+            <button onclick="togglePassword()" class="absolute right-6 top-1/2 -translate-y-1/2 text-2xl">👁️</button>
+          </div>
+          <button onclick="handleLogin()" class="w-full py-5 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl font-semibold text-xl shadow-lg hover:opacity-90 transition">உள்நுழை</button>
+        </div>
+        <p id="login-error" class="text-red-400 text-center mt-6 font-medium hidden">❌ தவறான விபரங்கள்!</p>
+      </div>
+    </div>
+
+    <!-- QUIZ -->
+    <div id="quiz-block" class="hidden">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-3xl font-bold">திருக்குறள்</h2>
+        <div class="flex items-center gap-6">
+          <div id="timer" class="bg-white/10 px-6 py-2 rounded-xl text-xl font-mono font-bold">60:00</div>
+          <div class="text-sm bg-white/10 px-4 py-2 rounded-xl">கேள்வி <span id="q-no" class="font-bold text-indigo-400">1</span>/100</div>
+        </div>
+      </div>
+      <div class="mb-8 progress-container">
+        <div id="progress-bar" class="progress-bar w-0"></div>
+      </div>
+      <div class="bg-[#2a1b4a] rounded-3xl p-8 shadow-2xl border border-white/10">
+        <p id="question-text" class="text-2xl mb-8 leading-relaxed"></p>
+        <div id="options" class="space-y-4"></div>
+      </div>
+      <div class="flex justify-end mt-8">
+        <button id="next-btn" onclick="nextQuestion()"
+                class="px-10 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg">
+          அடுத்து →
+        </button>
+      </div>
+    </div>
+
+    <!-- RESULT -->
+    <div id="result-block" class="hidden">
+      <div class="max-w-3xl mx-auto bg-white/15 backdrop-blur-xl rounded-3xl p-12 text-center shadow-2xl border border-white/20">
+        <h2 class="text-4xl font-bold mb-6">தேர்வு முடிவு</h2>
+        <div id="score-circle" class="mx-auto w-64 h-64 rounded-full border-[14px] border-emerald-400 flex items-center justify-center text-7xl font-bold mb-10 relative shadow-inner">
+          <div class="text-center">
+            <div id="score-text" class="text-6xl">0</div>
+            <div class="text-base text-emerald-200">/ 100</div>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-6">
+          <div class="bg-white/10 p-6 rounded-2xl border border-white/10">
+            <p id="correct-count" class="text-5xl font-bold text-emerald-400">0</p>
+            <p class="text-emerald-200 mt-2">சரி</p>
+          </div>
+          <div class="bg-white/10 p-6 rounded-2xl border border-white/10">
+            <p id="wrong-count" class="text-5xl font-bold text-rose-400">0</p>
+            <p class="text-rose-200 mt-2">தவறு</p>
+          </div>
+          <div class="bg-white/10 p-6 rounded-2xl border border-white/10">
+            <p id="time-taken" class="text-5xl font-bold text-amber-300">60:00</p>
+            <p class="text-amber-200 mt-2">நேரம்</p>
+          </div>
+        </div>
+        <button onclick="downloadUserResult()" class="mt-10 px-10 py-5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 rounded-3xl font-semibold flex items-center gap-3 mx-auto text-lg shadow-xl transition">
+          <i class="fas fa-download"></i> முழு விடை மதிப்பாய்வுடன் PDF பதிவிறக்கு
+        </button>
+      </div>
+    </div>
+
+    <!-- ADMIN DASHBOARD -->
+    <div id="admin-block" class="hidden">
+      <div class="bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
+        <div class="flex justify-between items-center mb-8 flex-wrap gap-4">
+          <h2 class="text-4xl font-bold flex items-center gap-3">
+            <i class="fas fa-chart-bar"></i> அட்மின் கண்காணிப்பு பலகை
+          </h2>
+          <div class="flex gap-3 flex-wrap">
+            <button onclick="fetchAdminData()" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-semibold flex items-center gap-2 shadow-lg transition">
+              <i class="fas fa-sync"></i> புதுப்பி
+            </button>
+            <button onclick="downloadAllResultsFullPDF()" class="px-6 py-3 bg-violet-600 hover:bg-violet-500 rounded-2xl font-semibold flex items-center gap-2 shadow-lg transition">
+              <i class="fas fa-download"></i> அனைத்து முடிவுகளும்
+            </button>
+            <a href="https://console.firebase.google.com/project/tnpsxc/database/tnpsxc-default-rtdb/data" target="_blank" class="px-6 py-3 bg-orange-600 hover:bg-orange-500 rounded-2xl font-semibold flex items-center gap-2 shadow-lg transition">
+              <i class="fas fa-external-link-alt"></i> Firebase Console
+            </a>
+          </div>
+        </div>
+        <div id="admin-stats" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10"></div>
+        <div class="bg-white/5 rounded-3xl p-6 overflow-x-auto border border-white/10">
+          <table class="w-full">
+            <thead>
+              <tr class="text-indigo-300 border-b border-white/10">
+                <th class="text-left py-4">மாணவர் பெயர்</th>
+                <th class="text-left py-4">Username</th>
+                <th class="text-center py-4">மதிப்பெண்</th>
+                <th class="text-center py-4">சரி</th>
+                <th class="text-center py-4">தவறு</th>
+                <th class="text-center py-4">நேரம்</th>
+                <th class="text-center py-4">பதிவிறக்கு</th>
+              </tr>
+            </thead>
+            <tbody id="admin-tbody" class="text-sm"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ==================== FIREBASE CONFIG ====================
+  firebase.initializeApp({
+    apiKey: "AIzaSyAVqXU4464Bgn63h1fGazUVBB1YlLotZGc",
+    authDomain: "tnpsxc.firebaseapp.com",
+    databaseURL: "https://tnpsxc-default-rtdb.firebaseio.com",
+    projectId: "tnpsxc",
+    storageBucket: "tnpsxc.firebasestorage.app",
+    messagingSenderId: "1056191651019",
+    appId: "1:1056191651019:web:386a56ef56a988556f4f4e",
+    measurementId: "G-X5LLV3RYG3"
+  });
+
+  const db = firebase.database();
+
+  const USERS = {
+    "Bharathi_": { pass: "bharathi123", name: "பாரதி" },
+    "Uma_parvathi": { pass: "uma123", name: "உமா பார்வதி" },
+    "student3": { pass: "stud123", name: "மாணவர் 3" },
+    "Ammu_": { pass: "Ammu@123", name: "அம்மு" },
+    "admin": { pass: "admin123", name: "அட்மின்" }
+  };
+
+  let currentUser = null;
+  let currentIndex = 0;
+  let answers = [];
+  let timerInterval;
+  let timeLeft = 3600;   // 60 minutes
+
+  // ==================== QUESTIONS (100) ====================
+  const questions = [
+    { question: "1. \"கல்தோன்றி மண் தோன்றாக் காலத்தே வாளோடு முன்தோன்றிய மூத்தக்குடி\" என்று எந்த நூலின் ஆசிரியர் கூறியுள்ளார்?", options: ["A) தொல்காப்பியம்", "B) புறப்பொருள் வெண்பாமாலை", "C) அகநானூறு", "D) நற்றிணை"], answer: 1 },
+    { question: "2. தாராபாரதிக்கு வழங்கப்பட்ட சிறப்புப் பட்டம் என்ன?", options: ["A) பாவலரேறு", "B) கவிஞாயிறு", "C) பெருஞ்சித்திரனார்", "D) உவமைக் கவிஞர்"], answer: 1 },
+    { question: "3. மைசூரிலிருந்து 5000 குதிரைப்படையை வேலுநாச்சியாரிடம் அனுப்பி வைத்தவர் யார்?", options: ["A) திப்பு சுல்தான்", "B) ஜெய் அலி", "C) ஹைதர் அலி", "D) நவாப் ஆற்காடு"], answer: 2 },
+    { question: "4. 'மா' என்னும் சொல்லின் பொருள் அல்லாதது எது?", options: ["A) மரம்", "B) வயல்", "C) புல்", "D) வண்டு"], answer: 2 },
+    { question: "5. பட்டுக்கோட்டை கல்யாணசுந்தரத்தை 'மக்கள் கவிஞர்' என அழைத்தவர் யார்?", options: ["A) பாரதிதாசன்", "B) ஜீவானந்தம்", "C) உடுமலை நாராயணகவி", "D) ஜெயகாந்தன்"], answer: 1 },
+    { question: "6. பூவின் ஏழு நிலைகளில் இறுதியான (ஏழாவது) நிலை எது?", options: ["A) அரும்பு", "B) மலர்", "C) செம்மல்", "D) வீ"], answer: 2 },
+    { question: "7. வேலுநாச்சியார் எந்தெந்த கலைகளில் பயிற்சி பெற்றிருந்தார்?", options: ["A) சிலம்பம், குதிரை ஏற்றம், வாள்சோர், வில்வித்தை", "B) வில்வித்தை மட்டும்", "C) சிலம்பம் மற்றும் நாட்டியம்", "D) மல்யுத்தம் மற்றும் கத்தி சண்டை"], answer: 0 },
+    { question: "8. 'தமிழ்' என்னும் சொல் முதலில் எந்த இலக்கியத்தில் இடம்பெற்றுள்ளது?", options: ["A) சிலப்பதிகாரம்", "B) தொல்காப்பியம்", "C) திருக்குறள்", "D) கலித்தொகை"], answer: 1 },
+    { question: "9. தாராபாரதி எந்த மாவட்டத்தில் பிறந்தார்?", options: ["A) தஞ்சாவூர்", "B) திருவண்ணாமலை", "C) மதுரை", "D) சேலம்"], answer: 1 },
+    { question: "10. பட்டுக்கோட்டை கல்யாணசுந்தரம் தனது கருத்துகள் செறிமிக்க பாடல்களை எந்தப் பத்திரிகை மூலம் வெளியிட்டார்?", options: ["A) குங்குமம்", "B) ஜனசக்தி", "C) ஆனந்த விகடன்", "D) கல்கி"], answer: 1 },
+    { question: "11. \"யாமறிந்த மொழிகளிலே தமிழ்மொழி போல் இனியாவது எங்கும் காணோம்\" என்று பாடியவர் யார்?", options: ["A) பாரதிதாசன்", "B) கம்பர்", "C) பாரதியார்", "D) திருவள்ளுவர்"], answer: 2 },
+    { question: "12. வேலுநாச்சியார் வாழ்ந்த காலம் என்ன?", options: ["A) 1720 - 1790", "B) 1730 - 1796", "C) 1740 - 1800", "D) 1735 - 1798"], answer: 1 },
+    { question: "13. 'தமிழ்நாடு' என்னும் சொல் எந்த இலக்கியத்தில் முதன்முதலில் ஆளப்பட்டுள்ளது?", options: ["A) அப்பர் தேவாரம்", "B) சிலப்பதிகாரம் (வஞ்சிக்காண்டம்)", "C) தொல்காப்பியம்", "D) புறநானூறு"], answer: 1 },
+    { question: "14. 'வேளாண்மை' என்னும் சொல் இடம்பெற்றுள்ள நூல்களில் சரியான இணை எது?", options: ["A) நற்றிணை - 4", "B) குறுந்தொகை - 239", "C) கலித்தொகை - 101, திருக்குறள் - 81", "D) அகநானூறு - 42"], answer: 2 },
+    { question: "15. தாராபாரதியின் இயற்பெயர் என்ன?", options: ["A) துரைசாமி", "B) இராதாகிருஷ்ணன்", "C) புஷ்பம்", "D) கவிஞாயிறு"], answer: 1 },
+    { question: "16. உடையாள் நடுகல் அமைக்கப்படுவதற்குக் காரணமாக இருந்த நிகழ்வு எது?", options: ["A) வேலுநாச்சியாரைக் காட்டிக் கொடுக்க மறுத்ததால் உடையாள் கொல்லப்பட்டார்", "B) போரில் வீரமரணம் அடைந்தார்", "C) ஆங்கிலேயப் படைக் தளபதியைக் கொன்றார்", "D) ஆயுதக் கிடங்கில் தீ வைத்ததால் இறந்தார்"], answer: 0 },
+    { question: "17. கணினித் தமிழில் 'Internet' என்பதன் சரியான கலைச்சொல் என்ன?", options: ["A) செயலி", "B) தேடு பொறி", "C) இணையம்", "D) தொடுதிரை"], answer: 2 },
+    { question: "18. \"என்று பிறந்தவள் என்று உணராத இயல்பினாம் எங்கள் தாய்\" என்று தமிழின் தொன்மையைப் பற்றிக் கூறியவர் யார்?", options: ["A) பாரதிதாசன்", "B) பாரதியார்", "C) கம்பர்", "D) ஐயனாரிதனார்"], answer: 1 },
+    { question: "19. பட்டுக்கோட்டை கல்யாணசுந்தரத்தின் முதல் பாடல் எது?", options: ["A) நல்லதைச் சொன்னானா நாத்திகனா", "B) தூங்காதே தம்பி தூங்காதே", "C) சின்னப் பயலே சின்னப் பயலே சேதி கேளடா", "D) திருடாத பாப்பா திருடாதே"], answer: 0 },
+    { question: "20. வேலுநாச்சியார் சிவகங்கையை மீட்டு எப்போது இராணியாக முடிசூட்டிக் கொண்டார்?", options: ["A) 1772", "B) 1780", "C) 1790", "D) 1796"], answer: 1 },
+    { question: "21. 'கோடை' என்னும் சொல் இடம்பெற்றுள்ள அகத்திணை நூல் எது?", options: ["A) நற்றிணை", "B) அகநானூறு - 42", "C) குறுந்தொகை", "D) ஐங்குறுநூறு"], answer: 1 },
+    { question: "22. \"இனிமையும் நீர்மையும் தமிழெனல் ஆகும்\" என்று எந்த நிகண்டு கூறுகிறது?", options: ["A) சூடாமணி நிகண்டு", "B) பிங்கல நிகண்டு", "C) அகராதி நிகண்டு", "D) திவாகர நிகண்டு"], answer: 1 },
+    { question: "23. பட்டுக்கோட்டை கல்யாணசுந்தரம் எழுதிய மொத்த திரைப்படப் பாடல்களின் எண்ணிக்கை எவ்வளவு?", options: ["A) 34", "B) 59", "C) 9", "D) 100"], answer: 1 },
+    { question: "24. தமிழ் எண்களில் 'சு' என்பது எந்த எண்கைக் குறிக்கும்?", options: ["A) 2", "B) 3", "C) 4", "D) 5"], answer: 2 },
+    { question: "25. தாராபாரதி எத்தனை ஆண்டுகள் ஆசிரியராகப் பணியாற்றினார்?", options: ["A) 30 ஆண்டுகள்", "B) 34 ஆண்டுகள்", "C) 40 ஆண்டுகள்", "D) 25 ஆண்டுகள்"], answer: 1 },
+    { question: "26. வேலுநாச்சியாரின் மகள் பெயர் என்ன?", options: ["A) உடையாள்", "B) சக்கந்தி முத்தாத்தாள்", "C) வெள்ளச்சி நாச்சியார்", "D) மீனாட்சி"], answer: 2 },
+    { question: "27. \"எண்ணமும் எழுத்தும் உயர்ந்திருக்கும் - ஏழை கண்ணீரும் பாடலிலே கலந்திருக்கும்\" என்று எழுதியவர் யார்?", options: ["A) ஜெயகாந்தனின் கவிதை", "B) ஜீவானந்தம்", "C) தாராபாரதி", "D) சுரதா"], answer: 0 },
+    { question: "28. மனிதனைப் பிற உயிரினங்களிடம் இருந்து வேறுபடுத்தியும், மேம்படுத்தியும் காட்டுவது எது எனக் குறிப்பிடப்பட்டுள்ளது?", options: ["A) பண்பாடு", "B) மொழி", "C) அறிவு", "D) நாகரிகம்"], answer: 1 },
+    { question: "29. 'மீன்' என்னும் சொல் எந்த நூலில் இடம் பெற்றுள்ளது?", options: ["A) நற்றிணை", "B) குறுந்தொகை - 54", "C) பதிற்றுப்பத்து", "D) ஐங்குறுநூறு"], answer: 1 },
+    { question: "30. திண்டுக்கல்லில் வேலுநாச்சியாருக்கு அடைக்கலம் தந்து உதவியவர் யார்?", options: ["A) ஹைதர் அலி", "B) கோபால நாயக்கர்", "C) மருது சகோதரர்கள்", "D) ஜெய் அலி"], answer: 1 },
+    { question: "31. தாராபாரதி தன் பெயரில் உள்ள 'ராதா' என்பதை எவ்வாறு மாற்றி கவிதைகள் எழுதினார்?", options: ["A) பாரதி", "B) தாராபாரதி", "C) இராதாசன்", "D) கவிபாரதி"], answer: 1 },
+    { question: "32. \"நீ மீண்டும் தோன்றிய பாரதியாடா\" என்று பட்டுக்கோட்டையாரைப் புகழ்ந்தவர் யார்?", options: ["A) ஜெயகாந்தன்", "B) தோழர் ஜீவானந்தம்", "C) பாரதிதாசன்", "D) உடுமலை நாராயணகவி"], answer: 1 },
+    { question: "33. தமிழ் எழுத்துக்கள் பெரும்பாலும் எத்தகைய எழுத்துக்களாக அமையப் பெற்றுள்ளன?", options: ["A) இடஞ்சுழி எழுத்துக்கள்", "B) வலஞ்சுழி எழுத்துக்கள்", "C) வட்ட எழுத்துக்கள்", "D) கோட்டு எழுத்துக்கள்"], answer: 1 },
+    { question: "34. வேலுநாச்சியார் எந்த மொழியில் மைசூர் சுல்தான் ஹைதர் அலியிடம் பேசினார்?", options: ["A) ஆங்கிலம்", "B) பிரஞ்சு", "C) உருது", "D) தமிழ்"], answer: 2 },
+    { question: "35. \"எளிய சொற்களால் எழுச்சியூட்டும் இவரது கவிதை வரிகளில்...\" என்று தாராபாரதியைப் பற்றிப் புகழ்ந்தவர் யார்?", options: ["A) இலக்கிய வீதி இனியவன்", "B) சுரதா", "C) ஈரோடு தமிழன்பன்", "D) கவிஞாயிறு"], answer: 0 },
+    { question: "36. பூவின் ஏழு நிலைகளில் 'மலர்' நிலைக்குப் பிறகு வரும் நிலை எது?", options: ["A) அரும்பு", "B) மொட்டு", "C) மலர்", "D) செம்மல்"], answer: 3 },
+    { question: "37. \"சின்னப் பயலே சின்னப் பயலே சேதி கேளடா\" என்ற புகழ்பெற்ற திரைப்படப் பாடலை எழுதியவர் யார்?", options: ["A) பட்டுக்கோட்டை கல்யாணசுந்தரம்", "B) கண்ணதாசன்", "C) மருதகாசி", "D) உடுமலை நாராயணகவி"], answer: 0 },
+    { question: "38. \"இமிழ் கடல் வேலியைத் தமிழ்நாடு ஆக்கிய இதுநீ கருதினை ஆயின்\" என்ற வரிகள் இடம்பெற்றுள்ள நூல் எது?", options: ["A) சிலப்பதிகாரம்", "B) தேவாரம்", "C) வஞ்சிப்பாடல் (வஞ்சி - 165)", "D) தொல்காப்பியம்"], answer: 2 },
+    { question: "39. தாராபாரதியின் எந்த அமைப்பு இவரது முயற்சிகளுக்கு உறுதுணையாக இருந்து ஊக்குவித்தது?", options: ["A) தமிழ்ப் பேரவை", "B) இலக்கிய வீதி", "C) கவிக்கோ மன்றம்", "D) செந்தமிழ் சங்கம்"], answer: 1 },
+    { question: "40. வேலுநாச்சியாரின் ஆண்கள் படைப்பிரிவுத் தளபதிகள் யார்?", options: ["A) மருது சகோதரர்கள் (சின்னமருது மற்றும் பெரியமருது)", "B) தாண்டவராயர் மற்றும் சின்னமருது", "C) ஹைதர் அலி மற்றும் ஜெய் அலி", "D) கோபால நாயக்கர் மற்றும் உடையாள்"], answer: 0 },
+    { question: "41. கீழ் கண்டவற்றுள் இடஞ்சுழி எழுத்துகளில் இடம்பெறும் எழுத்து எது?", options: ["A) அ", "B) எ", "C) ஔ", "D) ழ"], answer: 3 },
+    { question: "42. பட்டுக்கோட்டை கல்யாணசுந்தரம் சினிமாவில் எத்தனை ஆண்டுகள் இருந்தார்?", options: ["A) 5 ஆண்டுகள்", "B) 9 ஆண்டுகள்", "C) 10 ஆண்டுகள்", "D) 12 ஆண்டுகள்"], answer: 1 },
+    { question: "43. 'புகழ்' என்னும் சொல் எந்த இலக்கியத்தில் இடம் பெற்றுள்ளது?", options: ["A) குறுந்தொகை - 54", "B) தொல்காப்பியம், வேற்றுமையியல் - 71", "C) திருக்குறள் - 554", "D) அகநானூறு - 147"], answer: 1 },
+    { question: "44. தாராபாரதியின் கவிதைகளைப் பாராட்டிப் புகழ்ந்த 'உவமைக் கவிஞர்' யார்?", options: ["A) வாணிதாசன்", "B) சுரதா", "C) முடியரசன்", "D) கண்ணதாசன்"], answer: 1 },
+    { question: "45. வேலுநாச்சியார் மணிமண்டபம் அமைந்துள்ள இடம் எது?", options: ["A) இராமநாதபுரம்", "B) திண்டுக்கல்", "C) சூரக்குளம் கிராமம் (சிவகங்கை)", "D) காளையார்கோவில்"], answer: 2 },
+    { question: "46. 'இது எங்கள் கிழக்கு' நூலின் ஆசிரியர் யார்?", options: ["A) சுரதா", "B) தாராபாரதி", "C) ஈரோடு தமிழன்பன்", "D) முடியரசன்"], answer: 1 },
+    { question: "47. \"ஆரம்பமாவது பெண்ணுக்குள்ளே - மனிதன் அடி அடங்குவது மண்ணுக்குள்ளே\" என்ற வரிகளுக்குரிய கவிஞர் யார்?", options: ["A) கண்ணதாசன்", "B) பட்டுக்கோட்டை கல்யாணசுந்தரம்", "C) பாரதிதாசன்", "D) உடுமலை நாராயணகவி"], answer: 1 },
+    { question: "48. 'தமிழ் நாடகத் தமிழ்' எதனைச் செய்வதற்காக உருவானது?", options: ["A) எண்ணத்தை வெளிப்படுத்த", "B) உள்ளத்தை மகிழ்விக்க", "C) உணர்வில் கலந்து வாழ்வை நல்வழிப்படுத்த", "D) அறிவை வளர்க்க"], answer: 2 },
+    { question: "49. தாராபாரதியின் பெற்றோர்கள் யார்?", options: ["A) துரைசாமி - புஷ்பம் அம்மாள்", "B) முத்துசாமி - மீனாட்சி", "C) நடராஜன் - செல்லம்மாள்", "D) சாமிநாதன் - பாக்கியம்"], answer: 0 },
+    { question: "50. ஆங்கிலேயரை எதிர்த்து ஆயுதம் ஏந்திப் போராடிய முதல் பெண்மணி யார்?", options: ["A) குயிலி", "B) ஜான்சி ராணி", "C) வேலுநாச்சியார்", "D) மங்கம்மாள்"], answer: 2 },
+    { question: "51. 'புதிய விடியல்கள்' என்னும் கவிதை நூல் வெளிவந்த ஆண்டு எது?", options: ["A) 1980", "B) 1982", "C) 1989", "D) 2000"], answer: 1 },
+    { question: "52. \"என்றுமுள தென்மொழி\" என்று தமிழ் மொழியின் தொன்மையைச் புகழ்ந்தவர் யார்?", options: ["A) பாரதியார்", "B) கம்பர்", "C) தொல்காப்பியர்", "D) திருவள்ளுவர்"], answer: 1 },
+    { question: "53. பட்டுக்கோட்டை கல்யாணசுந்தரத்தை 'எனது வலது கை' என்று புகழ்ந்தவர் யார்?", options: ["A) ஜீவானந்தம்", "B) பாரதிதாசன்", "C) ஜெயகாந்தன்", "D) உடுமலை நாராயணகவி"], answer: 1 },
+    { question: "54. வேலுநாச்சியாரின் பெண்கள் படைப்பிரிவுக்குத் தலைமை ஏற்றவர் யார்?", options: ["A) உடையாள்", "B) குயிலி", "C) வெள்ளச்சி நாச்சியார்", "D) சக்கந்தி முத்தாத்தாள்"], answer: 1 },
+    { question: "55. கரும்பு, நாணல் ஆகியவற்றின் இலைப்பெயர் என்ன?", options: ["A) தாள்", "B) தோகை", "C) சண்டு", "D) இலை"], answer: 1 },
+    { question: "56. \"கவித்துவ வல்லமையும், கருத்துத் தெளிவும் நம்பிக்கை தரும் அளவுக்குத் தாராபாரதியுடன் விரவியுள்ளன\" எனக் கூறியவர் யார்?", options: ["A) தாராபாரதி", "B) ஈரோடு தமிழன்பன்", "C) இலக்கிய வீதி இனியவன்", "D) சுரதா"], answer: 1 },
+    { question: "57. பட்டுக்கோட்டை கல்யாணசுந்தரத்தின் மறைவு எப்போது நிகழ்ந்தது?", options: ["A) 13-04-1930", "B) 08-10-1959", "C) 13-05-2000", "D) 26-02-1947"], answer: 1 },
+    { question: "58. கணினித் தமிழில் 'Search Engine' என்பதன் சரியான கலைச்சொல் என்ன?", options: ["A) செயலி", "B) தேடு பொறி", "C) தொடுதிரை", "D) இணையம்"], answer: 1 },
+    { question: "59. வேலுநாச்சியார் கற்றறிந்த மொழிகள் யாவை?", options: ["A) தமிழ், ஆங்கிலம், பிரஞ்சு", "B) ஆங்கிலம், பிரஞ்சு, உருது", "C) தெலுங்கு, கன்னடம், சமஸ்கிருதம்", "D) அரபு, பாரசீகம், உருது"], answer: 1 },
+    { question: "60. திருக்குறள் எண் 611 இடம்பெற்றுள்ள அதிகாரம் எது?", options: ["A) செய்நன்றி அறிதல்", "B) ஆள்வினையுடைமை", "C) ஊக்கமுடைமை", "D) கல்வி"], answer: 1 },
+    { question: "61. பட்டுக்கோட்டை கல்யாணசுந்தரத்தின் புனைப்பெயர்களில் பொருந்தாதது எது?", options: ["A) அகல்யா", "B) உத்தம கவிஞர்", "C) பாட்டாளி கவிஞர்", "D) கவிஞாயிறு"], answer: 3 },
+    { question: "62. \"கல்தோன்றி மண் தோன்றாக் காலத்தே வாளோடு முன்தோன்றிய மூத்தக்குடி\" என்று தமிழ் மொழியின் தொன்மையைப் பற்றிக் கூறியவர் யார்?", options: ["A) பாரதியார்", "B) ஐயனாரிதனார்", "C) கம்பர்", "D) தொல்காப்பியர்"], answer: 1 },
+    { question: "63. வேலுநாச்சியாரின் அமைச்சராகப் பணியாற்றியவர் யார்?", options: ["A) தாண்டவராயர்", "B) ஜெய் அலி", "C) பெரிய மருது", "D) கோபால நாயக்கர்"], answer: 0 },
+    { question: "64. திறன்அல்ல தற்பிறர் செய்யினும் நோநொந்து அறனல்ல செய்யாமை நன்று - குறள் எண் என்ன?", options: ["A) குறள் 155", "B) குறள் 157", "C) குறள் 158", "D) குறள் 184"], answer: 1 },
+    { question: "65. 'இன்னொரு சிகரம்' நூல் வெளிவந்த ஆண்டு எது?", options: ["A) 2000", "B) 2002", "C) 1989", "D) 1982"], answer: 1 },
+    { question: "66. \"உச்சிமலையிலே ஊறும் அருவிகள் ஒரே வழியில் கலக்குது\" எனத் தொடங்கும் வரிகளின் ஆசிரியர் யார்?", options: ["A) பட்டுக்கோட்டை கல்யாணசுந்தரம்", "B) பாரதியார்", "C) கம்பர்", "D) சுரதா"], answer: 0 },
+    { question: "67. நெல், வரகு ஆகியவற்றின் தாவர இலைப் பெயர் என்ன?", options: ["A) இலை", "B) தாள்", "C) தழை", "D) மடல்"], answer: 1 },
+    { question: "68. \"பாரதி - அந்தத் தலைப்பாகைக் கவிஞனின் தமிழ் படித்துக் கவிஞனானவன் நான்\" என்று கூறியவர் யார்?", options: ["A) சுரதா", "B) தாராபாரதி", "C) ஈரோடு தமிழன்பன்", "D) வாணிதாசன்"], answer: 1 },
+    { question: "69. வேலுநாச்சியாரின் தந்தை பெயர் என்ன?", options: ["A) முத்துவதுகநாதர்", "B) செல்லமுத்து (இராமநாதபுர மன்னர்)", "C) மருதுபாண்டியன்", "D) கோபால நாயக்கர்"], answer: 1 },
+    { question: "70. \"செய்யும் தொழிலே தெய்வம் - அந்தத் திறமைதான் நமது செல்வம்\" என்ற பாடலை இயற்றியவர் யார்?", options: ["A) பட்டுக்கோட்டை கல்யாணசுந்தரம்", "B) மு. மேத்தா", "C) வாணிதாசன்", "D) அறிவுமதி"], answer: 0 },
+    { question: "71. தாழை, சப்பாத்திக் கள்ளி ஆகியவற்றின் இலைப்பெயர் என்ன?", options: ["A) இலை", "B) மடல்", "C) தோகை", "D) ஓலை"], answer: 1 },
+    { question: "72. பட்டுக்கோட்டை கல்யாணசுந்தரத்தின் சிறப்புப் பெயர்களில் பொருந்தாதது எது?", options: ["A) திரைிசைத் திருவள்ளுவர்", "B) பொதுவுடைமை கவிஞர்", "C) பாட்டாளி கவிஞர்", "D) பாவலரேறு"], answer: 3 },
+    { question: "73. 'மகிழ்ச்சி' என்னும் சொல் இடம்பெற்றுள்ள நூல் மற்றும் பகுதி எது?", options: ["A) தொல்காப்பியம், கிளவியாக்கம் - 56", "B) தொல்காப்பியம், கற்பியல் - 142 & திருக்குறள் - 531", "C) குறுந்தொகை - 324", "D) திருக்குறள் - 952"], answer: 1 },
+    { question: "74. 'விவசாயம் இனி இவர் வேதம்' (வேளாண் செம்மல் புலம்பாக்கம் முத்துமல்லா வரலாறு) வெளிவந்த ஆண்டு எது?", options: ["A) 1990", "B) 1992", "C) 2000", "D) 2001"], answer: 1 },
+    { question: "75. குயிலி தனது உடலில் தீ வைத்துக் கொண்டு எங்குள்ள ஆயுதக் கிடங்கில் குதித்தார்?", options: ["A) திண்டுக்கல் கோட்டை", "B) சிவகங்கை கோட்டை", "C) காளையார்கோவில் கோட்டை", "D) ஆற்காடு கோட்டை"], answer: 1 },
+    { question: "76. \"மிகுதியான் மிக்கவை செய்தாரைத் தாம்தம் தகுதியான் வென்று விடல்\" - குறள் எண் என்ன?", options: ["A) குறள் 157", "B) குறள் 158", "C) குறள் 184", "D) குறள் 190"], answer: 1 },
+    { question: "77. பட்டுக்கோட்டை கல்யாணசுந்தரத்தின் கவிதைகளைத் தொகுத்து வெளியிட்ட நிறுவனம் எது?", options: ["A) நியூசெஞ்சுரி புத்தக நிலையம்", "B) பூம்புகார் பதிப்பகம்", "C) பாரதி பதிப்பகம்", "D) தமிழ் எழுத்தாளர் சங்கம்"], answer: 0 },
+    { question: "78. வேலுநாச்சியார் தனது படையைத் திரட்டிப் பயிற்சி அளித்த இடம் எது?", options: ["A) திண்டுக்கல் கோட்டை", "B) சிவகங்கை கோட்டை", "C) வேலூர் கோட்டை", "D) திருச்சிராப்பள்ளி கோட்டை"], answer: 0 },
+    { question: "79. 'பாம்பு' என்னும் சொல் இடம்பெற்றுள்ள நூல் மற்றும் அடி/பாடல் எண் எது?", options: ["A) குறுந்தொகை - 239", "B) நற்றிணை - 4", "C) அகநானூறு - 147", "D) பதிற்றுப்பத்து - 15"], answer: 0 },
+    { question: "80. \"....தமிழின் கண்டாய்\" என்ற வரிகள் இடம்பெற்றுள்ள நூல் எது?", options: ["A) திருநாவுக்கரசர் தேவாரம்", "B) திருவாசகம்", "C) பெரியபுராணம்", "D) கம்பராமாயணம்"], answer: 0 },
+    { question: "81. வேலுநாச்சியாருக்கு வழங்கப்பட்ட சிறப்புப் பெயர்கள் யாவை?", options: ["A) வீராங்கை, தென்னிந்திய ஜான்சிராணி", "B) சிவகங்கை சிங்கம்", "C) வீரத் தமிழச்சி", "D) பாஞ்சாலங்குறிச்சி வீராங்கனை"], answer: 0 },
+    { question: "82. பட்டுக்கோட்டை கல்யாணசுந்தரத்தின் இயற்பெயர் என்ன?", options: ["A) கல்யாணசுந்தரம்", "B) ஜீவானந்தம்", "C) உத்தம கவிஞர்", "D) அகல்யா"], answer: 0 },
+    { question: "83. 'பூமியைத் திறக்கும் பொன்சாவி' வெளிவந்த ஆண்டு எது?", options: ["A) 1992", "B) 2000", "C) 2001", "D) 2002"], answer: 2 },
+    { question: "84. 'உழவர்' என்னும் சொல் இடம்பெற்றுள்ள நூல் எது?", options: ["A) நற்றிணை - 4", "B) குறுந்தொகை - 239", "C) அகநானூறு - 42", "D) பதிற்றுப்பத்து - 15"], answer: 0 },
+    { question: "85. \"அவர் கோட்டை நான் பேட்டை என வேடிக்கையாகச் சொன்னவர்\" யார்?", options: ["A) ஜீவானந்தம்", "B) உடுமலை நாராயணகவி", "C) பாரதிதாசன்", "D) ஜெயகாந்தன்"], answer: 1 },
+    { question: "86. தமிழ் இலக்கண நூல்களாக குறிப்பிடப்படுபவை எவை?", options: ["A) எட்டுத்தொகை, பத்துப்பாட்டு", "B) தொல்காப்பியம், நன்னூல்", "C) திருக்குறள், நாலடியார்", "D) சிலப்பதிகாரம், மணிமேகலை"], answer: 1 },
+    { question: "87. கமுகு (பாக்கு) மரத்தின் இலைப்பெயர் என்ன?", options: ["A) ஓலை", "B) கூந்தல்", "C) தாள்", "D) மடல்"], answer: 1 },
+    { question: "88. பட்டுக்கோட்டையாரின் மணிமண்டபம் எங்கு அமைந்துள்ளது?", options: ["A) சென்னை", "B) பட்டுக்கோட்டை (தஞ்சாவூர் மாவட்டம்)", "C) மதுரை", "D) திருவண்ணாமலை"], answer: 1 },
+    { question: "89. காளையார்கோவில் போரில் முத்துவதுகநாதர் எப்போது வீரமரணம் அடைந்தார்?", options: ["A) 1770", "B) 1772", "C) 1780", "D) 1796"], answer: 1 },
+    { question: "90. தமிழ் எண்களில் 'ள' (ளு) அல்லது 'உ' குறிக்கும் எண் என்ன?", options: ["A) 1", "B) 2", "C) 8", "D) 9"], answer: 1 },
+    { question: "91. பட்டுக்கோட்டை கல்யாணசுந்தரம் பிறந்த ஊர் எது?", options: ["A) செங்கப்படுத்தான் காடு", "B) குவளை", "C) கீழக்கோடுங்காலூர்", "D) திருத்துறைப்பூண்டி"], answer: 0 },
+    { question: "92. 'டாக்டர் ராதாகிருஷ்ணன் விருது' (சிறந்த ஆசிரியருக்கானது) தாராபாரதிக்கு எதற்காக வழங்கப்பட்டது?", options: ["A) அவரது கவிதை நூல்களுக்காக", "B) அவரது பணிகளைப் பாராட்டி தமிழக அரசு வழங்கிய விருது", "C) தொலைக்காட்சி நிகழ்ச்சிகளுக்காக", "D) சமூக சேவைக்காக"], answer: 1 },
+    { question: "93. புளி மற்றும் வேம்பு மரங்களின் இலை குறிக்கப்படும் சொல் எது?", options: ["A) இலை", "B) கீரை", "C) தாள்", "D) மடல்"], answer: 0 },
+    { question: "94. சிவகங்கை மன்னரான முத்துவதுகநாதரை மணந்தவர் யார்?", options: ["A) உடையாள்", "B) குயிலி", "C) வேலுநாச்சியார்", "D) வெள்ளச்சி நாச்சியார்"], answer: 2 },
+    { question: "95. 'வெள்ளம்' என்னும் சொல் இடம்பெற்றுள்ள சங்க இலக்கிய நூல் எது?", options: ["A) குறுந்தொகை", "B) பதிற்றுப்பத்து - 15", "C) நற்றிணை", "D) பரிபாடல்"], answer: 1 },
+    { question: "96. தாராபாரதி பிறந்த ஊர் எது?", options: ["A) கீழக்கோடுங்காலூர்", "B) குவளை", "C) ராணிப்பேட்டை", "D) செட்டிப்பாளையம்"], answer: 1 },
+    { question: "97. 'தாராபாரதி ஹைக்கு விருது' எந்த அமைப்பு அல்லது யாரின் நினைவாக வழங்கப்படுகிறது?", options: ["A) தமிழக அரசு ஆண்டுதோறும் தாராபாரதி நினைவாக வழங்கும் விருது", "B) தமிழ் எழுத்தாளர் சங்கம் வழங்கும் விருது", "C) இலக்கிய வீதி வழங்கும் விருது", "D) சென்னை வானொலி வழங்கும் விருது"], answer: 0 },
+    { question: "98. \"கண்நின்று கண்அறச் சொல்லினும் சொல்லற்க முன்நின்று பின்நோக்காச் சொல்\" - குறள் இடம்பெற்றுள்ள அதிகாரம் எது?", options: ["A) இன்னா செய்யாமை", "B) புறங்கூறாமை", "C) ஒப்புரவறிதல்", "D) ஈகை"], answer: 1 },
+    { question: "99. ஏதிலார் குற்றம் போல் தம்குற்றம் காண்கிறபின் தீதுண்டோ மன்னும் உயிர்க்கு - குறள் எண் என்ன?", options: ["A) குறள் 157", "B) குறள் 158", "C) குறள் 184", "D) குறள் 190"], answer: 3 },
+    { question: "100. \"பால்காய் கசப்புச் சுவை உடையது\" என்பதைக் 'கசப்புக்காய்' எனக்கூறாமல் 'பாகற்காய்' என வழங்கி சீர்மைப்படுத்திய தமிழின் சிறப்பு எங்கு வெளிப்படுகிறது?", options: ["A) உயர்தினை", "B) அஃறிணை", "C) பாகற்காய் பெயர்", "D) திணை வழுவமைதி"], answer: 2 }
+  ];
+
+  // ==================== HELPER FUNCTIONS ====================
+  function preventThreeFingerTouch() {
+    document.addEventListener('touchstart', function(e) {
+      if (e.touches.length >= 3) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        alert("❌ 3 விரல் தொடுதல் அனுமதிக்கப்படவில்லை!\n\nதேர்வின் போது இது தடைசெய்யப்பட்டுள்ளது.");
+        return false;
+      }
+    }, { passive: false });
+  }
+
+  function togglePassword() {
+    const pwd = document.getElementById('password');
+    const btn = pwd.parentElement.querySelector('button');
+    if (pwd.type === "password") {
+      pwd.type = "text"; btn.textContent = "🙈";
+    } else {
+      pwd.type = "password"; btn.textContent = "👁️";
+    }
+  }
+
+  // ==================== LOGIN (FIXED) ====================
+  function handleLogin() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const errorEl = document.getElementById('login-error');
+
+    if (USERS[username] && USERS[username].pass === password) {
+      currentUser = { username, ...USERS[username] };
+      errorEl.classList.add('hidden');
+      document.getElementById('login-block').classList.add('hidden');
+
+      if (username === "admin") {
+        document.getElementById('admin-block').classList.remove('hidden');
+        fetchAdminData();
+      } else {
+        checkPreviousAttempt();
+      }
+    } else {
+      errorEl.classList.remove('hidden');
+    }
+  }
+
+  // ==================== CHECK PREVIOUS ATTEMPT (FIXED WITH ERROR HANDLING) ====================
+  function checkPreviousAttempt() {
+    db.ref('quiz_results/' + currentUser.username).once('value')
+      .then((snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          if (data.answers && Array.isArray(data.answers) && data.answers.some(a => a !== null && a !== undefined)) {
+            let correct = 0;
+            data.answers.forEach((ans, i) => {
+              if (ans === questions[i].answer) correct++;
+            });
+            data.correct = correct;
+            data.incorrect = 100 - correct;
+            data.score = correct;
+            showResult(data);
+          } else {
+            startNewQuiz();
+          }
+        } else {
+          startNewQuiz();
+        }
+      })
+      .catch((error) => {
+        console.error("Firebase error:", error);
+        alert("Firebase இணைப்பில் சிக்கல். புதிய தேர்வு தொடங்கப்படுகிறது...");
+        startNewQuiz();
+      });
+  }
+
+  function startNewQuiz() {
+    document.getElementById('quiz-block').classList.remove('hidden');
+    answers = new Array(100).fill(null);
+    currentIndex = 0;
+    timeLeft = 3600;
+    preventMobileReload();
+    preventThreeFingerTouch();
+    startTimer();
+    loadQuestion();
+  }
+
+  function startTimer() {
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      const m = Math.floor(timeLeft / 60);
+      const s = timeLeft % 60;
+      document.getElementById('timer').textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+      if (timeLeft <= 0) submitQuiz();
+    }, 1000);
+  }
+
+  function loadQuestion() {
+    const q = questions[currentIndex];
+    document.getElementById('q-no').textContent = currentIndex + 1;
+    const progressPercent = ((currentIndex) / 100) * 100;
+    document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+    document.getElementById('question-text').textContent = q.question;
+    const container = document.getElementById('options');
+    container.innerHTML = '';
+    q.options.forEach((opt, i) => {
+      const div = document.createElement('div');
+      div.className = `option p-6 rounded-2xl border cursor-pointer text-lg ${answers[currentIndex] === i ? 'selected' : ''}`;
+      div.textContent = opt;
+      div.onclick = () => {
+        answers[currentIndex] = i;
+        saveProgress();
+        loadQuestion();
+      };
+      container.appendChild(div);
+    });
+    document.getElementById('next-btn').disabled = answers[currentIndex] === null;
+  }
+
+  function saveProgress() {
+    if (!currentUser) return;
+    db.ref('quiz_results/' + currentUser.username).update({
+      name: currentUser.name,
+      answers: answers,
+      timestamp: new Date().toISOString()
+    }).catch(err => console.error("Save progress error:", err));
+  }
+
+  function nextQuestion() {
+    if (answers[currentIndex] === null) {
+      alert("⚠️ கேள்விக்கு ஒரு விடையைத் தேர்ந்தெடுக்கவும்!");
+      return;
+    }
+    if (currentIndex < 99) {
+      currentIndex++;
+      loadQuestion();
+    } else {
+      submitQuiz();
+    }
+  }
+
+  function submitQuiz() {
+    clearInterval(timerInterval);
+    let correct = 0;
+    answers.forEach((ans, i) => {
+      if (ans === questions[i].answer) correct++;
+    });
+    const totalTime = 3600;
+    const usedSeconds = totalTime - timeLeft;
+    const hours = Math.floor(usedSeconds / 3600);
+    const minutes = Math.floor((usedSeconds % 3600) / 60);
+    const seconds = usedSeconds % 60;
+    const finalTime =
+      (hours > 0 ? hours + ":" : "") +
+      String(minutes).padStart(2, "0") + ":" +
+      String(seconds).padStart(2, "0");
+
+    const result = {
+      name: currentUser.name,
+      score: correct,
+      correct: correct,
+      incorrect: 100 - correct,
+      timeTaken: finalTime,
+      answers: answers,
+      timestamp: new Date().toISOString()
+    };
+
+    db.ref('quiz_results/' + currentUser.username).set(result)
+      .then(() => showResult(result))
+      .catch((err) => {
+        console.error("Submit error:", err);
+        showResult(result);
+      });
+  }
+
+  function showResult(res) {
+    document.getElementById('quiz-block').classList.add('hidden');
+    document.getElementById('result-block').classList.remove('hidden');
+    document.getElementById('score-text').textContent = res.score ?? res.correct ?? 0;
+    document.getElementById('correct-count').textContent = res.correct ?? 0;
+    document.getElementById('wrong-count').textContent = res.incorrect ?? (100 - (res.correct ?? 0));
+    document.getElementById('time-taken').textContent = res.timeTaken || "60:00";
+  }
+
+  function preventMobileReload() {
+    const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (!isMobile) return;
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey && (e.key === 'r' || e.key === 'R')) || e.key === 'F5') {
+        e.preventDefault();
+        alert("❌ மொபைல் குரோமில் ரீலோட் செய்ய முடியாது!");
+      }
+    });
+    history.pushState(null, null, location.href);
+    window.addEventListener('popstate', () => {
+      history.pushState(null, null, location.href);
+      alert("❌ பின்னோக்கி செல்ல முடியாது!");
+    });
+  }
+
+  // ==================== PDF FUNCTIONS ====================
+  function generateDetailedPDF(username, result) {
+    const element = document.createElement('div');
+    element.style.padding = '40px';
+    element.style.fontFamily = "'Noto Sans Tamil', sans-serif";
+    element.style.background = 'white';
+    element.style.color = '#1f2937';
+
+    let correctCount = 0;
+    questions.forEach((q, i) => {
+      const selected = result.answers ? result.answers[i] : null;
+      if (selected === q.answer) correctCount++;
+    });
+    const incorrectCount = 100 - correctCount;
+
+    let html = `
+      <h1 style="text-align:center; color:#4f46e5; font-size:28px;">VIVEKANANDAR TNPSC CENTRE</h1>
+      <h2 style="text-align:center; margin:20px 0;">திருக்குறள் முழு விடை மதிப்பாய்வு அறிக்கை</h2>
+      <div style="background:#f8fafc; padding:25px; border-radius:16px; margin-bottom:30px;">
+        <strong>மாணவர்:</strong> ${result.name} (${username})<br>
+        <strong>மதிப்பெண்:</strong> ${correctCount}/100 | சரி: ${correctCount} | தவறு: ${incorrectCount} | நேரம்: ${result.timeTaken || '60:00'}
+      </div>
+    `;
+
+    questions.forEach((q, i) => {
+      const selected = result.answers ? result.answers[i] : null;
+      const isCorrect = selected === q.answer;
+      html += `
+        <div style="margin-bottom:25px; padding:20px; border:2px solid ${isCorrect ? '#10b981' : '#ef4444'}; border-radius:12px;">
+          <strong>${i+1}. ${q.question}</strong><br><br>
+          <strong>மாணவர் விடை:</strong> ${selected !== null && selected !== undefined ? q.options[selected] : "—"}
+          <span style="color:${isCorrect ? '#10b981' : '#ef4444'};"> ${isCorrect ? '✅' : '❌'}</span><br>
+          ${!isCorrect ? `<strong style="color:#10b981">சரியான விடை:</strong> ${q.options[q.answer]}` : ''}
+        </div>`;
+    });
+
+    element.innerHTML = html;
+    const opt = { margin: 15, filename: `${result.name}_Thirukkural_Result.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4' }};
+    html2pdf().set(opt).from(element).save();
+  }
+
+  function downloadUserResult() {
+    db.ref('quiz_results/' + currentUser.username).once('value')
+      .then((snapshot) => {
+        if (snapshot.exists()) generateDetailedPDF(currentUser.username, snapshot.val());
+      })
+      .catch(err => alert("PDF தரவை பெற முடியவில்லை: " + err.message));
+  }
+
+  function downloadSingleAdminResult(username, result) {
+    generateDetailedPDF(username, result);
+  }
+
+  function downloadAllResultsFullPDF() {
+    db.ref('quiz_results').once('value')
+      .then((snapshot) => {
+        let allHTML = `<div style="font-family:'Noto Sans Tamil',sans-serif; padding:40px; color:#1f2937;">
+          <h1 style="text-align:center; color:#4f46e5;">VIVEKANANDAR TNPSC CENTRE</h1>
+          <h2 style="text-align:center;">திருக்குறள் - அனைத்து மாணவர்கள் முழு விவரம்</h2>`;
+        snapshot.forEach((child) => {
+          const res = child.val();
+          let cCount = 0;
+          questions.forEach((q, qi) => {
+            if (res.answers && res.answers[qi] === q.answer) cCount++;
+          });
+          allHTML += `<div style="page-break-before:always; margin-top:40px;">
+            <h3 style="color:#4f46e5;">${res.name} (${child.key}) - ${cCount}/100</h3>`;
+          questions.forEach((q, i) => {
+            const selected = res.answers ? res.answers[i] : null;
+            const isCorrect = selected === q.answer;
+            allHTML += `
+              <div style="margin:20px 0; padding:18px; border:2px solid ${isCorrect ? '#10b981' : '#ef4444'}; border-radius:10px;">
+                <strong>${i+1}. ${q.question}</strong><br><br>
+                <strong>மாணவர் விடை:</strong> ${selected !== null && selected !== undefined ? q.options[selected] : "—"}
+                <span style="color:${isCorrect ? '#10b981' : '#ef4444'};"> ${isCorrect ? '✅' : '❌'}</span><br>
+                ${!isCorrect ? `<strong style="color:#10b981">சரியான விடை:</strong> ${q.options[q.answer]}` : ''}
+              </div>`;
+          });
+        });
+        allHTML += `</div>`;
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = allHTML;
+        document.body.appendChild(tempDiv);
+        const opt = { margin: 15, filename: 'Thirukkural_All_Users_Full_Details.pdf', html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4' }};
+        html2pdf().set(opt).from(tempDiv).save().then(() => document.body.removeChild(tempDiv));
+      })
+      .catch(err => alert("அனைத்து முடிவுகளையும் பெற முடியவில்லை: " + err.message));
+  }
+
+  // ==================== ADMIN ====================
+  function fetchAdminData() {
+    const tbody = document.getElementById('admin-tbody');
+    tbody.innerHTML = '';
+    db.ref('quiz_results').once('value')
+      .then((snapshot) => {
+        let totalStudents = 0, totalScore = 0;
+        snapshot.forEach((child) => {
+          const res = child.val();
+          totalStudents++;
+          let correct = 0;
+          if (res.answers) {
+            res.answers.forEach((ans, qi) => {
+              if (ans === questions[qi].answer) correct++;
+            });
+          }
+          const incorrect = 100 - correct;
+          totalScore += correct;
+          const row = document.createElement('tr');
+          row.className = "border-b border-white/10 hover:bg-white/10 cursor-pointer transition";
+          row.innerHTML = `
+            <td class="py-5 font-medium">${res.name}</td>
+            <td class="py-5 text-indigo-300">${child.key}</td>
+            <td class="text-center py-5 font-bold">${correct}/100</td>
+            <td class="text-center py-5 text-emerald-400">${correct}</td>
+            <td class="text-center py-5 text-rose-400">${incorrect}</td>
+            <td class="text-center py-5 text-amber-300">${res.timeTaken || "60:00"}</td>
+            <td class="text-center py-5">
+              <button class="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-medium shadow transition">📥 PDF</button>
+            </td>
+          `;
+          tbody.appendChild(row);
+          row.querySelector('button').addEventListener('click', (e) => {
+            e.stopImmediatePropagation();
+            downloadSingleAdminResult(child.key, res);
+          });
+        });
+        const avg = totalStudents ? (totalScore / totalStudents).toFixed(1) : 0;
+        document.getElementById('admin-stats').innerHTML = `
+          <div class="bg-white/10 p-6 rounded-3xl text-center border border-white/10">
+            <div class="text-5xl font-bold">${totalStudents}</div>
+            <div class="text-sm text-indigo-300 mt-2">மொத்த மாணவர்கள்</div>
+          </div>
+          <div class="bg-white/10 p-6 rounded-3xl text-center border border-white/10">
+            <div class="text-5xl font-bold">${avg}</div>
+            <div class="text-sm text-indigo-300 mt-2">சராசரி மதிப்பெண்</div>
+          </div>
+        `;
+      })
+      .catch(err => {
+        console.error("Admin fetch error:", err);
+        alert("Admin data பெற முடியவில்லை: " + err.message);
+      });
+  }
+</script>
+</body>
+</html>
